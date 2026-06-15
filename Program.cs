@@ -1,46 +1,72 @@
-using System.Collections.Concurrent;
+using ProjetCsharp.Models;
+using ProjetCsharp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Services enregistrés en singleton : ils portent le stockage en mémoire.
+builder.Services.AddSingleton<TaskService>();
+builder.Services.AddSingleton<ProjectService>();
+builder.Services.AddSingleton<CategoryService>();
+
 var app = builder.Build();
 
-// In-memory store (thread-safe) to keep the demo dependency-free.
-var tasks = new ConcurrentDictionary<int, TodoTask>();
-var nextId = 0;
+// Données de démo (l'état est réinitialisé à chaque redémarrage).
+var seedTasks = app.Services.GetRequiredService<TaskService>();
+seedTasks.Create(new CreateTaskRequest("Apprendre Docker Compose"));
+seedTasks.Create(new CreateTaskRequest("Ecrire une API minimale en C#"));
 
-void Seed(string title)
-{
-    var id = Interlocked.Increment(ref nextId);
-    tasks[id] = new TodoTask(id, title, false);
-}
-
-Seed("Apprendre Docker Compose");
-Seed("Ecrire une API minimale en C#");
-
-// Route 1 — health check
+// --- Health check ---
 app.MapGet("/", () => Results.Ok(new { status = "ok", service = "projet-csharp" }));
 
-// Route 2 — list all tasks
-app.MapGet("/tasks", () => Results.Ok(tasks.Values.OrderBy(t => t.Id)));
+// --- Tasks ---
+app.MapGet("/tasks", (TaskService svc) => Results.Ok(svc.GetAll()));
 
-// Route 3 — get a single task by id
-app.MapGet("/tasks/{id:int}", (int id) =>
-    tasks.TryGetValue(id, out var task)
+app.MapGet("/tasks/{id:int}", (int id, TaskService svc) =>
+    svc.GetById(id) is { } task
         ? Results.Ok(task)
         : Results.NotFound(new { error = $"Task {id} not found" }));
 
-// Route 4 — create a task
-app.MapPost("/tasks", (CreateTaskRequest req) =>
+app.MapPost("/tasks", (CreateTaskRequest req, TaskService svc) =>
 {
-    if (string.IsNullOrWhiteSpace(req.Title))
-        return Results.BadRequest(new { error = "Title is required" });
+    var result = svc.Create(req);
+    return result.Success
+        ? Results.Created($"/tasks/{result.Value!.Id}", result.Value)
+        : Results.BadRequest(new { error = result.Error });
+});
 
-    var id = Interlocked.Increment(ref nextId);
-    var task = new TodoTask(id, req.Title, req.Done);
-    tasks[id] = task;
-    return Results.Created($"/tasks/{id}", task);
+// --- Projects ---
+app.MapGet("/projects", (ProjectService svc) => Results.Ok(svc.GetAll()));
+
+app.MapGet("/projects/{id:int}", (int id, ProjectService svc) =>
+    svc.GetById(id) is { } project
+        ? Results.Ok(project)
+        : Results.NotFound(new { error = $"Project {id} not found" }));
+
+app.MapPost("/projects", (CreateProjectRequest req, ProjectService svc) =>
+{
+    var result = svc.Create(req);
+    return result.Success
+        ? Results.Created($"/projects/{result.Value!.Id}", result.Value)
+        : Results.BadRequest(new { error = result.Error });
+});
+
+// --- Categories ---
+app.MapGet("/categories", (CategoryService svc) => Results.Ok(svc.GetAll()));
+
+app.MapGet("/categories/{id:int}", (int id, CategoryService svc) =>
+    svc.GetById(id) is { } category
+        ? Results.Ok(category)
+        : Results.NotFound(new { error = $"Category {id} not found" }));
+
+app.MapPost("/categories", (CreateCategoryRequest req, CategoryService svc) =>
+{
+    var result = svc.Create(req);
+    return result.Success
+        ? Results.Created($"/categories/{result.Value!.Id}", result.Value)
+        : Results.BadRequest(new { error = result.Error });
 });
 
 app.Run();
 
-record TodoTask(int Id, string Title, bool Done);
-record CreateTaskRequest(string Title, bool Done = false);
+// Rend la classe Program accessible aux tests d'intégration éventuels.
+public partial class Program { }

@@ -8,4 +8,12 @@
     <AssemblyName>ProjetCsharp</AssemblyName>
   </PropertyGroup>
 
+  <!-- Le dossier tests/ a son propre projet ; on l'exclut de la compilation du projet web. -->
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <EmbeddedResource Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
 </Project>

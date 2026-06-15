@@ -18,11 +18,18 @@ These rules apply to ALL files in the project and MUST be followed at all times:
 
 ASP.NET Core 8 Minimal API ("Tasks" demo). The entire app is a single `Program.cs`
 using top-level statements — no controllers, no separate service/DI layers. Data is
-held in an in-memory `ConcurrentDictionary` seeded at startup, so state resets on every
-restart. The four routes are registered directly in `Program.cs`:
-`GET /`, `GET /tasks`, `GET /tasks/{id:int}`, `POST /tasks`.
+held in an in-memory `ConcurrentDictionary`, so state resets on every restart.
 
-`.NET is not installed on the host` — all build/run happens inside Docker.
+`Program.cs` only wires DI and routes — the logic lives in a thin service layer:
+- `Models/` — entities (`TodoTask`, `Project`, `Category`) and the `Create*Request` DTOs.
+- `Services/` — `TaskService`, `ProjectService`, `CategoryService`, each owning an
+  in-memory store and validation. `Result<T>` is the success/error return type
+  (no exceptions for control flow), which keeps services unit-testable in isolation.
+
+Routes: `GET /`, and `GET`/`GET {id:int}`/`POST` for each of `/tasks`, `/projects`,
+`/categories`. A `TodoTask` carries optional `ProjectId`/`CategoryId` links.
+
+`.NET is not installed on the host` — all build/run/test happens inside Docker.
 
 ## Commands
 
@@ -39,8 +46,17 @@ docker compose -f compose.dev.yaml down
 
 In dev mode, editing any `.cs` file triggers `dotnet watch` hot reload (~1s, no rebuild).
 
-There are no automated tests. Verify behavior by hitting the routes with `curl`
-against `http://localhost:8080` (e.g. `curl -X POST .../tasks -H 'Content-Type:
+```bash
+# Unit tests (xUnit) — the test project lives in tests/ and references the web project
+docker run --rm -v "$(pwd)":/src -w /src mcr.microsoft.com/dotnet/sdk:8.0 \
+  dotnet test tests/ProjetCsharp.Tests.csproj
+```
+
+Unit tests in `tests/` (xUnit) cover the service layer. `tests/` is excluded from the
+web project's compilation (`<Compile Remove="tests/**" />` in the `.csproj`) and the
+prod `Dockerfile` only copies/publishes the root `*.csproj`, so tests never reach the
+runtime image. You can also verify behavior by hitting the routes with `curl` against
+`http://localhost:8080` (e.g. `curl -X POST .../tasks -H 'Content-Type:
 application/json' -d '{"title":"..."}'`).
 
 ## Two-Dockerfile setup
