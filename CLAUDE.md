@@ -4,6 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Clean Code Rules (MANDATORY)
 
+
 These rules apply to ALL files in the project and MUST be followed at all times:
 
 - **Max 400 lines per file** — if a file exceeds 400 lines, split it into smaller modules
