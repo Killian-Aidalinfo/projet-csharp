@@ -24,6 +24,25 @@ docker compose down
 docker compose logs -f
 ```
 
+## Mode dev (hot reload)
+
+Pour développer avec rechargement à chaud (`dotnet watch`), une modif de
+`Program.cs` est appliquée sans rebuild :
+
+```bash
+docker compose -f compose.dev.yaml up --build
+```
+
+Le code source est monté en volume dans le conteneur. Édite un fichier `.cs` :
+`dotnet watch` détecte le changement et fait un hot reload (~1s).
+
+```bash
+docker compose -f compose.dev.yaml down   # arrêter
+```
+
+> Le mode dev utilise l'image SDK complète (plus lourde) ; le `compose.yaml`
+> de base reste l'image de prod optimisée.
+
 ## Les 4 routes
 
 | Méthode | Chemin         | Description                  |
