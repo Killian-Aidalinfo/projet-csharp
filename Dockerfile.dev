@@ -1,0 +1,18 @@
+# Image de dev : le SDK complet (nécessaire pour `dotnet watch`)
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+WORKDIR /src
+
+# Restore en couche séparée pour le cache
+COPY *.csproj ./
+RUN dotnet restore
+
+# Le reste du code est monté en volume au runtime (voir compose.dev.yaml),
+# donc pas besoin de COPY ici.
+
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+# Watcher par polling : fiable pour les bind mounts Docker sous Linux
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+
+# Hot reload ; --non-interactive évite les prompts sur "rude edit"
+ENTRYPOINT ["dotnet", "watch", "run", "--non-interactive"]

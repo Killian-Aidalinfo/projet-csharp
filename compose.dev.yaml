@@ -1,0 +1,19 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: projet-csharp-api-dev
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_USE_POLLING_FILE_WATCHER=true
+    volumes:
+      # Le code source est monté : toute modif est rechargée à chaud
+      - .:/src
+      # Volumes anonymes pour garder bin/ et obj/ du conteneur
+      # (évite les conflits avec d'éventuels artefacts de l'hôte)
+      - /src/bin
+      - /src/obj
+    restart: unless-stopped
