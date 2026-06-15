@@ -1,0 +1,30 @@
+name: .NET build & test
+
+# Déclenché sur les PR vers main et manuellement depuis l'onglet Actions.
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    # On cible le projet de test : il référence le projet web,
+    # donc restore/build/test couvrent les deux projets.
+    - name: Install dependencies
+      run: dotnet restore tests/ProjetCsharp.Tests.csproj
+
+    - name: Build
+      run: dotnet build tests/ProjetCsharp.Tests.csproj --no-restore
+
+    - name: Test with the dotnet CLI
+      run: dotnet test tests/ProjetCsharp.Tests.csproj --no-build --verbosity normal
